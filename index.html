@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>randzip — web</title>
+<meta name="description" content="Generate huge repeated-line text files packed into one small zip, right in your browser.">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #11141c;
+    --panel-2: #171b26;
+    --border: #262c3a;
+    --text: #e7e9ee;
+    --text-dim: #9aa3b5;
+    --accent: #7c9cff;
+    --accent-2: #5ad1a8;
+    --warn: #ffb454;
+    --danger: #ff6b6b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #f0f2f8;
+      --border: #dde1ec;
+      --text: #1a1d27;
+      --text-dim: #5c6378;
+      --accent: #3b5bdb;
+      --accent-2: #0f9d72;
+      --warn: #b4690e;
+      --danger: #d8373f;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --panel-2: #f0f2f8;
+    --border: #dde1ec;
+    --text: #1a1d27;
+    --text-dim: #5c6378;
+    --accent: #3b5bdb;
+    --accent-2: #0f9d72;
+    --warn: #b4690e;
+    --danger: #d8373f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+  }
+  header { margin-bottom: 28px; }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .sub { color: var(--text-dim); margin: 0; font-size: 0.95rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 0.95rem;
+    font-family: var(--mono);
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .field-full { grid-column: 1 / -1; }
+  .plan {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    white-space: pre-wrap;
+    margin-bottom: 16px;
+  }
+  .plan b { color: var(--text); }
+  button {
+    appearance: none;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: #0b0d12;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .progress-wrap {
+    margin-top: 16px;
+    display: none;
+  }
+  .progress-wrap.active { display: block; }
+  .bar-track {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.15s ease;
+  }
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+  .warn {
+    border-color: var(--warn);
+    color: var(--warn);
+    font-size: 0.85rem;
+    padding: 10px 12px;
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .warn.active { display: block; }
+  .result {
+    display: none;
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    border: 1px solid var(--accent-2);
+  }
+  .result.active { display: block; }
+  .result a {
+    color: var(--accent-2);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .result a:hover { text-decoration: underline; }
+  footer {
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    text-align: center;
+    margin-top: 36px;
+  }
+  footer a { color: var(--text-dim); }
+  code {
+    font-family: var(--mono);
+    background: var(--panel-2);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.85em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🗜️ randzip — web</h1>
+    <p class="sub">Generate huge repeated-line text files packed into one small zip — entirely in your browser, nothing uploaded anywhere.</p>
+  </header>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label for="files">Number of files</label>
+        <input type="number" id="files" value="5" min="1" max="200">
+      </div>
+      <div>
+        <label for="sizeMb">Size each (MB)</label>
+        <input type="number" id="sizeMb" value="10" min="1" max="2000">
+      </div>
+      <div>
+        <label for="level">Compression (0–9)</label>
+        <input type="number" id="level" value="6" min="0" max="9">
+      </div>
+      <div>
+        <label for="outName">Output filename</label>
+        <input type="text" id="outName" value="random.zip">
+      </div>
+    </div>
+
+    <div class="plan" id="plan"></div>
+    <div class="warn" id="warn">⚠️ That's a large in-browser job — your tab may use a lot of memory and could freeze or crash. Consider the <a href="#cli" style="color:inherit">command-line tool</a> for anything over a couple of GB.</div>
+
+    <div class="row">
+      <button id="generateBtn">Generate zip</button>
+      <button id="cancelBtn" class="secondary" style="display:none">Cancel</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="progress-label" id="progressLabel">Preparing…</div>
+    </div>
+
+    <div class="result" id="result">
+      ✅ Built <b id="resultSize"></b>. <a id="downloadLink" href="#">Download <span id="resultName"></span></a>
+    </div>
+  </div>
+
+  <div class="card" id="cli">
+    <h3 style="margin-top:0">Need way more than your browser can handle?</h3>
+    <p class="sub" style="margin-bottom:10px">
+      This page is a convenient, zero-install demo. For tens or hundreds of GB (or TB),
+      use the command-line tool this page is based on — it streams writes straight into
+      the zip with no large in-memory buffers:
+    </p>
+    <code>python randzip.py -n 4 -s 15360 -o huge.zip&nbsp;&nbsp;# 4 x 15 GB = 60 GB extracted</code>
+    <p class="sub" style="margin-top:10px;margin-bottom:0">
+      See <a href="README.md" style="color:var(--accent)">README.md</a> in this repo for all options.
+    </p>
+  </div>
+
+  <footer>
+    Built with <a href="https://github.com/lonaMisa-codes/Test1">randzip-cli</a> ·
+    Runs 100% client-side via <a href="https://github.com/101arrowz/fflate">fflate</a>, deployed with GitHub Actions + Pages.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+<script>
+(function () {
+  const MB = 1024 * 1024;
+  const WARN_TOTAL_MB = 1024; // 1 GB — browser-memory-friendly threshold
+
+  const filesEl = document.getElementById('files');
+  const sizeMbEl = document.getElementById('sizeMb');
+  const levelEl = document.getElementById('level');
+  const outNameEl = document.getElementById('outName');
+  const planEl = document.getElementById('plan');
+  const warnEl = document.getElementById('warn');
+  const generateBtn = document.getElementById('generateBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const barFill = document.getElementById('barFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const resultEl = document.getElementById('result');
+  const resultSizeEl = document.getElementById('resultSize');
+  const resultNameEl = document.getElementById('resultName');
+  const downloadLink = document.getElementById('downloadLink');
+
+  let cancelled = false;
+  let lastObjectUrl = null;
+
+  function human(n) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(1)} ${units[i]}`;
+  }
+
+  function updatePlan() {
+    const files = Math.max(1, parseInt(filesEl.value) || 1);
+    const sizeMb = Math.max(1, parseInt(sizeMbEl.value) || 1);
+    const totalMb = files * sizeMb;
+    planEl.innerHTML =
+      `Plan: <b>${files}</b> file(s) × <b>${human(sizeMb * MB)}</b> = <b>${human(totalMb * MB)}</b> extracted\n` +
+      `Estimated zip size: ~<b>${human((totalMb * MB) / 1000)}</b> (repeated-line content compresses hard)`;
+    warnEl.classList.toggle('active', totalMb > WARN_TOTAL_MB);
+  }
+  [filesEl, sizeMbEl].forEach(el => el.addEventListener('input', updatePlan));
+  updatePlan();
+
+  // One random base64 text line, repeated to fill ~1 MB — mirrors randzip.py's make_block().
+  function makeBlock() {
+    const raw = new Uint8Array(48);
+    crypto.getRandomValues(raw);
+    let bin = '';
+    raw.forEach(b => bin += String.fromCharCode(b));
+    const line = btoa(bin) + '\n';
+    const lineBytes = new TextEncoder().encode(line);
+    const reps = Math.max(1, Math.floor(MB / lineBytes.length));
+    const block = new Uint8Array(reps * lineBytes.length);
+    for (let i = 0; i < reps; i++) block.set(lineBytes, i * lineBytes.length);
+    return block;
+  }
+
+  function buildFile(targetBytes) {
+    const block = makeBlock();
+    const out = new Uint8Array(targetBytes);
+    let written = 0;
+    while (written < targetBytes) {
+      const chunk = Math.min(block.length, targetBytes - written);
+      out.set(block.subarray(0, chunk), written);
+      written += chunk;
+    }
+    return out;
+  }
+
+  async function run() {
+    cancelled = false;
+    const files = Math.max(1, parseInt(filesEl.value) || 1);
+    const sizeMb = Math.max(1, parseInt(sizeMbEl.value) || 1);
+    const level = Math.min(9, Math.max(0, parseInt(levelEl.value) || 6));
+    const outName = (outNameEl.value || 'random.zip').trim() || 'random.zip';
+
+    generateBtn.disabled = true;
+    cancelBtn.style.display = 'inline-block';
+    progressWrap.classList.add('active');
+    resultEl.classList.remove('active');
+    if (lastObjectUrl) { URL.revokeObjectURL(lastObjectUrl); lastObjectUrl = null; }
+
+    const zipObj = {};
+    for (let i = 1; i <= files; i++) {
+      if (cancelled) break;
+      progressLabel.textContent = `Generating file ${i}/${files} (${sizeMb} MB)…`;
+      barFill.style.width = `${((i - 1) / files) * 90}%`;
+      // yield to the UI thread before each (potentially heavy) allocation
+      await new Promise(r => setTimeout(r, 0));
+      const data = buildFile(sizeMb * MB);
+      zipObj[`random_${String(i).padStart(3, '0')}.txt`] = [data, { level }];
+    }
+
+    if (cancelled) {
+      progressLabel.textContent = 'Cancelled.';
+      generateBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      return;
+    }
+
+    progressLabel.textContent = 'Compressing into zip…';
+    barFill.style.width = '92%';
+    await new Promise(r => setTimeout(r, 0));
+
+    fflate.zip(zipObj, {}, (err, data) => {
+      generateBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      if (err) {
+        progressLabel.textContent = 'Error: ' + err.message;
+        return;
+      }
+      barFill.style.width = '100%';
+      const blob = new Blob([data], { type: 'application/zip' });
+      lastObjectUrl = URL.createObjectURL(blob);
+      downloadLink.href = lastObjectUrl;
+      downloadLink.download = outName;
+      resultSizeEl.textContent = human(blob.size);
+      resultNameEl.textContent = outName;
+      resultEl.classList.add('active');
+      progressLabel.textContent = 'Done.';
+    });
+  }
+
+  generateBtn.addEventListener('click', run);
+  cancelBtn.addEventListener('click', () => { cancelled = true; });
+})();
+</script>
+</body>
+</html>
