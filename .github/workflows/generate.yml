@@ -1,0 +1,57 @@
+name: Generate randzip (on-demand)
+
+# Runs the real randzip.py on GitHub's own Actions runner — not in your
+# browser and not on your machine. Trigger it from the "Actions" tab
+# ("Run workflow"), fill in the fields, and download the resulting zip
+# from the finished run's Artifacts section.
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: "Number of files"
+        default: "5"
+        required: true
+      size_mb:
+        description: "Size of EACH file, in MB"
+        default: "100"
+        required: true
+      compress_level:
+        description: "Deflate level 0-9 (9 = smallest zip)"
+        default: "9"
+        required: true
+      throttle:
+        description: "Seconds to sleep per MB written (0 = max speed)"
+        default: "0.003"
+        required: true
+      out_name:
+        description: "Output zip filename"
+        default: "random.zip"
+        required: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    # GitHub-hosted runners have ~14 GB free disk — plenty for the final
+    # (tiny) zip, but keep requests well under that if you also want the
+    # artifact upload to stay fast.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run randzip.py
+        run: |
+          python3 randzip.py \
+            -n "${{ inputs.files }}" \
+            -s "${{ inputs.size_mb }}" \
+            -c "${{ inputs.compress_level }}" \
+            -t "${{ inputs.throttle }}" \
+            -o "${{ inputs.out_name }}" \
+            -y
+
+      - name: Upload zip as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.out_name }}
+          path: ${{ inputs.out_name }}
+          retention-days: 7

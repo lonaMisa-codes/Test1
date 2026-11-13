@@ -243,9 +243,18 @@
   <div class="card" id="cli">
     <h3 style="margin-top:0">Need way more than your browser can handle?</h3>
     <p class="sub" style="margin-bottom:10px">
-      This page is a convenient, zero-install demo. For tens or hundreds of GB (or TB),
-      use the command-line tool this page is based on — it streams writes straight into
-      the zip with no large in-memory buffers:
+      This page runs entirely in your tab, so it's capped by your browser's memory.
+      Two ways to go bigger, run elsewhere:
+    </p>
+    <p class="sub" style="margin:0 0 6px">
+      <b>On GitHub's servers, no install:</b> open this repo's
+      <a href="https://github.com/lonaMisa-codes/Test1/actions/workflows/generate.yml" style="color:var(--accent)">Actions → "Generate randzip (on-demand)"</a>,
+      click <b>Run workflow</b>, fill in the fields, and download the finished zip
+      from that run's Artifacts once it completes.
+    </p>
+    <p class="sub" style="margin:0 0 10px">
+      <b>On your own machine, any size:</b> run the CLI directly — it streams writes
+      straight into the zip with no large in-memory buffers:
     </p>
     <code>python randzip.py -n 4 -s 15360 -o huge.zip&nbsp;&nbsp;# 4 x 15 GB = 60 GB extracted</code>
     <p class="sub" style="margin-top:10px;margin-bottom:0">
